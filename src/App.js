@@ -8,6 +8,7 @@ import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminAddNews from './pages/Admin/AdminAddNews';
 import AdminEditNews from './pages/Admin/AdminEditNews';
 import Navbar from './components/Navbar';
+import NewsDetail from './components/NewsDetail';
 import './App.css';
 import './index.css';
 
@@ -42,8 +43,8 @@ function App() {
           <Route path="/news/:id" element={<NewsPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/admin/home" element={<AdminDashboard/>} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin" element={<AdminDashboard/>} />
+          <Route path="/admin/add-news" element={<AdminAddNews />} />
 
           {/* Admin Routes */}
           <Route 

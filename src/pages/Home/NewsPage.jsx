@@ -4,6 +4,8 @@ import { fetchNewsById } from '../../utils/api';
 import NewsDetail from '../../components/NewsDetail';
 import CommentList from '../../components/CommentList';
 import CommentForm from '../../components/CommentForm';
+import { Link } from 'react-router-dom';
+import { fetchAllNews } from '../../utils/api'; // Import the function to fetch all news
 
 const NewsPage = () => {
   const { id } = useParams();
@@ -12,26 +14,18 @@ const NewsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [comments, setComments] = useState([]);
+  const [newsList, setNewsList] = useState([]);
 
-  useEffect(() => {
-    const loadNewsDetail = async () => {
-      try {
-        setLoading(true);
-        const newsData = await fetchNewsById(id);
-        if (!newsData) {
-          throw new Error('News not found');
-        }
-        setNews(newsData);
-        setComments(newsData.comments || []);
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to load news detail. The article might have been removed.');
-        setLoading(false);
-      }
-    };
 
-    loadNewsDetail();
-  }, [id]);
+    useEffect(() => {
+  const loadAllNews = async () => {
+    const data = await fetchAllNews();
+    setNewsList(data);
+  };
+
+  loadAllNews();
+}, []);
+
 
   const handleCommentAdded = (newComment) => {
     setComments([...comments, newComment]);
@@ -56,22 +50,23 @@ const NewsPage = () => {
   }
 
   return (
-    <div className="news-page">
-      <button 
-        className="btn btn-outline mb-4"
-        onClick={() => navigate('/')}
-      >
-        ← Back to News
-      </button>
-      
-      {news && <NewsDetail news={news} />}
-      
-      <div className="comment-section">
-        <h3 className="text-xl font-bold mb-4">Comments ({comments.length})</h3>
-        <CommentList comments={comments} />
-        <CommentForm newsId={id} onCommentAdded={handleCommentAdded} />
-      </div>
-    </div>
+    <div className="news-page bg-pink-50 min-h-screen p-4 md:p-8">
+  <button 
+    className="mb-4 text-white bg-pink-500 hover:bg-pink-600 font-semibold py-2 px-4 rounded-xl shadow"
+    onClick={() => navigate('/')}
+  >
+    ← Back to News
+  </button>
+
+  {news && <NewsDetail news={news} />}
+
+  <div className="comment-section bg-white p-6 rounded-2xl shadow-inner">
+    <h3 className="text-xl font-bold mb-4 text-pink-700">Comments ({comments.length})</h3>
+    <CommentList comments={comments} />
+    <CommentForm newsId={id} onCommentAdded={handleCommentAdded} />
+  </div>
+</div>
+
   );
 };
 
