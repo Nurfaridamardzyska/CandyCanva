@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 const CommentForm = ({ newsId, onCommentAdded }) => {
   const [comment, setComment] = useState('');
@@ -6,8 +6,7 @@ const CommentForm = ({ newsId, onCommentAdded }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (comment.trim()) {
-      const newComment = { id: Date.now(), content: comment };
-      onCommentAdded(newComment);
+      onCommentAdded(comment);
       setComment('');
     }
   };
@@ -15,14 +14,18 @@ const CommentForm = ({ newsId, onCommentAdded }) => {
   return (
     <form onSubmit={handleSubmit} className="mt-4">
       <textarea
-        className="w-full border p-2 rounded"
-        placeholder="Write a comment..."
         value={comment}
         onChange={(e) => setComment(e.target.value)}
+        placeholder="Write a comment..."
+        className="w-full p-2 border rounded-lg mb-2"
       />
-      <button type="submit" className="mt-2 bg-pink-500 hover:bg-pink-600 text-white font-semibold py-2 px-4 rounded-xl shadow">Post Comment</button>
+      <button
+        type="submit"
+        className="bg-pink-500 text-white px-4 py-2 rounded hover:bg-pink-600"
+      >
+        Post Comment
+      </button>
     </form>
   );
 };
-
 export default CommentForm;
