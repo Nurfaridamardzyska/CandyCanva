@@ -1,48 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import NewsDetail from '../../components/NewsDetail';
 import CommentList from '../../components/CommentList';
 import CommentForm from '../../components/CommentForm';
+import { fetchNewsById, fetchCommentsByNewsId, addComment } from '../../api/api';
 
 const NewsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [news, setNews] = useState(null);
   const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data untuk berita berdasarkan ID
-  const mockNews = {
-    '5': {
-      id: '5',
-      title: 'ENHYPEN Announces Fan Meeting Tour',
-      category: 'KPOP',
-      content: 'Meet ENHYPEN in their upcoming Asia tour!',
-    },
-    // Tambahkan lebih banyak mock data jika diperlukan
-    '1': {
-      id: '1',
-      title: 'BLACKPINK Announces World Tour 2025',
-      category: 'KPOP',
-      content: 'The K-pop sensation BLACKPINK has announced their highly anticipated world tour, set to begin in Seoul before heading to major cities across Asia, Europe, and North America.',
-    },
-    '2': {
-      id: '2',
-      title: 'BTS\'s Jungkook Releases Solo Album',
-      category: 'KPOP',
-      content: 'BTS member Jungkook has released his first full-length solo album "Eternal", featuring collaborations with several international artists.',
-    },
-    '3': {
-      id: '3',
-      title: 'TWICE Celebrates 10-Year Anniversary',
-      category: 'KPOP',
-      content: 'TWICE celebrates their 10-year anniversary with a special fan meeting event and the release of a commemorative album.',
-    },
-  };
+  useEffect(() => {
+    const loadNews = async () => {
+      setLoading(true);
+      try {
+        const data = await fetchNewsById(id);
+        setNews(data);
+        const commentsData = await fetchCommentsByNewsId(id);
+        setComments(commentsData);
+      } catch (err) {
+        setNews(null);
+        setComments([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadNews();
+  }, [id]);
 
-  const news = mockNews[id] || null;
-
-  const handleCommentAdded = (newComment) => {
+  const handleCommentAdded = async (content) => {
+    // Optionally, you can add author field
+    const newComment = await addComment(id, content);
     setComments([...comments, newComment]);
   };
+
+  if (loading) {
+    return <div className="text-center py-8">Loading...</div>;
+  }
 
   if (!news) {
     return (

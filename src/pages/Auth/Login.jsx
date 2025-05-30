@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { authAPI } from '../../api/api'; // Import from your existing api folder
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -8,53 +9,65 @@ const Login = () => {
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
-  const dummyUsers = [
-    { email: 'admin@example.com', password: 'admin123', role: 'admin' },
-    { email: 'user@example.com', password: 'user123', role: 'user' }
-  ];
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear error when user starts typing
+    if (error) setError(null);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
 
+    // Basic validation
     if (!formData.email || !formData.password) {
       setError('Please fill in all fields');
       return;
     }
 
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
     setLoading(true);
 
-    setTimeout(() => {
-      const foundUser = dummyUsers.find(
-        (u) =>
-          u.email.toLowerCase() === formData.email.toLowerCase() &&
-          u.password === formData.password
-      );
+    try {
+      // Call backend API
+      const result = await authAPI.login({
+        email: formData.email,
+        password: formData.password
+        
+      });
 
-      if (foundUser) {
-        setSuccess(true);
-        localStorage.setItem('token', 'dummy-token');
-        localStorage.setItem('role', foundUser.role);
+      console.log('Login result:', result);
+      
 
-        setTimeout(() => {
-          if (foundUser.role === 'admin') {
-            navigate('/admin/dashboard');
-          } else {
-            navigate('/');
-          }
-        }, 1000);
-      } else {
-        setError('Email atau password salah');
-      }
+      if (result.token && result.user) {
+      localStorage.setItem('token', result.token);
+      localStorage.setItem('user', JSON.stringify(result.user));
+      localStorage.setItem('role', result.user.role || 'user');
 
+      setSuccess(true);
+
+      setTimeout(() => {
+        navigate(result.user.role === 'admin' ? '/admin' : '/dashboard');
+      }, 1000);
+    } else {
+      setError('Login failed. Invalid credentials or server error.');
+    }
+
+    } catch (err) {
+      setError('Login failed. Invalid credentials or server error.');
+      console.error('Login error:', err);
+    } finally {
       setLoading(false);
-    }, 1500);
-  };
+    }
+
+  }
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-pink-50 to-white p-4">
@@ -83,6 +96,7 @@ const Login = () => {
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400"
                 placeholder="Your email"
+                disabled={loading}
               />
             </div>
 
@@ -95,32 +109,35 @@ const Login = () => {
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400"
                 placeholder="Your password"
+                disabled={loading}
               />
             </div>
 
             <button
               type="submit"
-              className={`w-full py-2 px-4 rounded-lg font-medium text-white ${
-                loading ? 'bg-pink-300' : 'bg-pink-500 hover:bg-pink-600'
+              className={`w-full py-2 px-4 rounded-lg font-medium text-white transition-colors ${
+                loading 
+                  ? 'bg-pink-300 cursor-not-allowed' 
+                  : 'bg-pink-500 hover:bg-pink-600 active:bg-pink-700'
               }`}
               disabled={loading}
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Logging in...
+                </div>
+              ) : (
+                'Login'
+              )}
             </button>
           </form>
         )}
 
         <div className="mt-6 text-center text-sm text-gray-600">
-          <p className="mb-2">
-            Gunakan akun simulasi:
-            <br />
-            <strong>admin@example.com / admin123</strong>
-            <br />
-            <strong>user@example.com / user123</strong>
-          </p>
           <p>
             Belum punya akun?{' '}
-            <Link to="/register" className="text-pink-500 hover:text-pink-700 font-medium">
+            <Link to="/register" className="text-pink-500 hover:text-pink-700 font-medium transition-colors">
               Daftar di sini
             </Link>
           </p>
@@ -130,4 +147,5 @@ const Login = () => {
   );
 };
 
-export default Login;
+    
+export default Login; 

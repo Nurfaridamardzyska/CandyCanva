@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { fetchNews, addNews, updateNews, deleteNews } from '../../api/news';
+import {fetchAllNews, addNews, updateNews, deleteNews, fetchCategories } from '../../api/api';
 
 const Admin = () => {
   const [newsList, setNewsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+   const [categories, setCategories] = useState([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
 
   // States for news form
   const [formMode, setFormMode] = useState('add'); // 'add' or 'edit'
   const [currentNewsId, setCurrentNewsId] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
-    summary: '',
     content: '',
-    category: 'Release',
+    category_id: '', // ubah ke snake_case
     image: '',
     publishedAt: new Date().toISOString().split('T')[0],
   });
@@ -22,15 +23,27 @@ const Admin = () => {
   const [showForm, setShowForm] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
 
-  // Fetch all news on component mount
+
   useEffect(() => {
     loadNews();
-  }, []);
+    const loadCategories = async () => {
+    try {
+      const data = await fetchCategories();
+      console.log('Fetched categories:', data);
+      setCategories(data);
+    } catch (err) {
+      console.error('Failed to load categories:', err);
+    }
+  };
+
+  loadCategories();
+}, []);
+
 
   const loadNews = async () => {
     try {
       setLoading(true);
-      const data = await fetchNews();
+      const data = await fetchAllNews();
       setNewsList(data);
       setError(null);
     } catch (err) {
@@ -54,9 +67,8 @@ const Admin = () => {
   const resetForm = () => {
     setFormData({
       title: '',
-      summary: '',
       content: '',
-      category: 'Release',
+      category_id: '', // ubah ke snake_case
       image: '',
       publishedAt: new Date().toISOString().split('T')[0],
     });
@@ -73,20 +85,33 @@ const Admin = () => {
   };
 
   // Open form for editing existing news
-  const handleEdit = (news) => {
-    setFormData({
-      title: news.title,
-      summary: news.summary,
-      content: news.content || '',
-      category: news.category,
-      image: news.image,
-      publishedAt: new Date(news.publishedAt).toISOString().split('T')[0],
-    });
-    setCurrentNewsId(news.id);
-    setFormMode('edit');
-    setShowForm(true);
-    setSubmitStatus(null);
-  };
+const handleEdit = (news) => {
+  let publishedDate = '';
+  try {
+    if (news.publishedAt) {
+      const parsedDate = new Date(news.publishedAt);
+      if (!isNaN(parsedDate)) {
+        publishedDate = parsedDate.toISOString().slice(0, 10);
+      }
+    }
+  } catch (err) {
+    console.warn('Invalid date format:', news.publishedAt);
+  }
+
+  setFormData({
+    title: news.title || '',
+    image: news.image || '',
+    category_id: news.category_id || '', // ubah ke snake_case
+    publishedAt: publishedDate || new Date().toISOString().slice(0, 10),
+    content: news.content || '',
+  });
+
+  setCurrentNewsId(news.id);
+  setFormMode('edit');
+  setShowForm(true);
+};
+
+
 
   // Handle news deletion with confirmation
   const handleDelete = async (id) => {
@@ -103,45 +128,36 @@ const Admin = () => {
     }
   };
 
-  // Handle form submission for both add and edit
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitStatus(null);
-
-    try {
-      // Prepare the news data
-      const newsData = {
-        ...formData,
-        publishedAt: new Date(formData.publishedAt).toISOString(),
-      };
-
-      let result;
-      
-      if (formMode === 'add') {
-        // Add new news
-        result = await addNews(newsData);
-        setNewsList([...newsList, result]);
-        setSubmitStatus({ success: true, message: 'News added successfully!' });
-      } else {
-        // Update existing news
-        result = await updateNews(currentNewsId, newsData);
-        setNewsList(newsList.map(news => news.id === currentNewsId ? result : news));
-        setSubmitStatus({ success: true, message: 'News updated successfully!' });
-      }
-
-      // Close form after short delay to show success message
-      setTimeout(() => {
-        setShowForm(false);
-        resetForm();
-      }, 2000);
-    } catch (err) {
-      setSubmitStatus({ 
-        success: false, 
-        message: `Failed to ${formMode === 'add' ? 'add' : 'update'} news. Please try again.` 
-      });
-      console.error(`Error ${formMode === 'add' ? 'adding' : 'updating'} news:`, err);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const submitData = {
+      ...formData,
+      image_url: formData.image, // mapping image ke image_url
+    };
+    if (formMode === 'add') {
+      await addNews(submitData);
+    } else if (formMode === 'edit' && currentNewsId) {
+      await updateNews(currentNewsId, submitData);
     }
-  };
+
+    setFormMode('add');
+    setCurrentNewsId(null);
+    setFormData({
+      title: '',
+      image: '',
+      category_id: '', // ubah ke snake_case
+      publishedAt: new Date().toISOString().slice(0, 10),
+      content: '',
+    });
+    setShowForm(false);
+  } catch (error) {
+    console.error('Error submitting form:', error);
+  }
+};
+
+  // Handle form submission for both add and edit
+
 
   const handleCancel = () => {
     setShowForm(false);
@@ -169,6 +185,12 @@ const Admin = () => {
       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
     </svg>
   );
+
+  const getCategoryNameById = (id) => {
+  const category = categories.find(cat => String(cat.id) === String(id));
+  return category ? category.name : 'Unknown';
+};
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-white">
@@ -226,7 +248,12 @@ const Admin = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="h-10 w-10 flex-shrink-0">
-                            <img className="h-10 w-10 rounded-full object-cover" src={news.image} alt="" />
+                            <img
+                              className="h-10 w-10 rounded-full object-cover"
+                              src={news.imageUrl}
+                              alt=""
+                              onError={e => e.target.src = 'https://via.placeholder.com/100?text=No+Image'}
+                            />
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">{news.title}</div>
@@ -235,7 +262,7 @@ const Admin = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-pink-100 text-pink-600">
-                          {news.category}
+                          {getCategoryNameById(news.category_id)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -292,18 +319,6 @@ const Admin = () => {
                   </div>
                   
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Summary</label>
-                    <textarea
-                      name="summary"
-                      value={formData.summary}
-                      onChange={handleInputChange}
-                      rows="3"
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
                     <textarea
                       name="content"
@@ -315,21 +330,22 @@ const Admin = () => {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                    <select
-                      name="category"
-                      value={formData.category}
-                      onChange={handleInputChange}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500"
-                      required
-                    >
-                      <option value="Release">Release</option>
-                      <option value="Concert">Concert</option>
-                      <option value="Celebrity">Celebrity</option>
-                      <option value="Event">Event</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select
+                    name="category_id" // ubah ke snake_case
+                    value={formData.category_id}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Published Date</label>

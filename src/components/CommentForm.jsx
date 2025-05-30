@@ -1,21 +1,20 @@
 import { useState } from 'react';
 
 const CommentForm = ({ newsId, onCommentAdded }) => {
-  const [comment, setComment] = useState('');
+  const [content, setContent] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (comment.trim()) {
-      onCommentAdded(comment);
-      setComment('');
-    }
+    if (!content.trim()) return;
+    onCommentAdded(content);
+    setContent('');
   };
 
   return (
     <form onSubmit={handleSubmit} className="mt-4">
       <textarea
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
         placeholder="Write a comment..."
         className="w-full p-2 border rounded-lg mb-2"
       />
@@ -28,4 +27,5 @@ const CommentForm = ({ newsId, onCommentAdded }) => {
     </form>
   );
 };
+
 export default CommentForm;

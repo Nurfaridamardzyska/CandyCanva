@@ -1,22 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { addNews } from '../../utils/api';
+import { addNews, fetchCategories } from '../../api/api';
+import axios from 'axios'; // Tambahkan ini
 
 const AdminAddNews = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [categories, setCategories] = useState([]);
   const [error, setError] = useState('');
+  const [image, setImage] = useState(null); // Tambahkan ini
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      const cats = await fetchCategories();
+      setCategories(cats);
+      if (cats.length > 0) setCategoryId(cats[0].id); // default pilih category pertama
+    };
+    loadCategories();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      await addNews({ title, content, comments: [] });
-      alert('Berita berhasil ditambahkan!');
-      navigate('/'); // atau redirect ke dashboard admin
-    } catch (err) {
-      setError('Gagal menambahkan berita. Coba lagi.');
-    }
+
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("content", content);
+    formData.append("category_id", categoryId); // <-- ubah ke snake_case
+    formData.append("image", image);
+
+    const token = localStorage.getItem('token');
+
+    await axios.post("/api/news", formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    // Lanjutkan...
   };
 
   return (
@@ -36,6 +58,24 @@ const AdminAddNews = () => {
           placeholder="Isi berita"
           value={content}
           onChange={(e) => setContent(e.target.value)}
+          required
+        />
+        <select
+          className="w-full p-2 border rounded mb-3"
+          value={categoryId}
+          onChange={(e) => setCategoryId(e.target.value)}
+          required
+        >
+          {categories.map(cat => (
+            <option key={cat.id} value={cat.id}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
+        <input
+          type="file"
+          className="w-full p-2 border rounded mb-3"
+          onChange={(e) => setImage(e.target.files[0])}
           required
         />
         <button className="bg-pink-500 hover:bg-pink-600 text-white py-2 px-4 rounded" type="submit">
